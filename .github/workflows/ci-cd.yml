@@ -88,7 +88,7 @@ jobs:
           --application-name ${{ matrix.appname }} \
           --description "This is a revision for the ${{ matrix.appname }}-${{ github.sha }}" \
           --ignore-hidden-files \
-          --s3-location s3://${{ matrix.s3-bucket }}/${{ matrix.s3-filename }}.zip \
+          --s3-location s3://${{ matrix.s3-bucket }}/ \
           --source ${{matrix.s3-filename}}.zip
       # Create deployment to CodeDeploy
       - name: AWS Create Deployment
@@ -99,3 +99,5 @@ jobs:
            --deployment-group-name ${{ matrix.deploy-group }} \
            --file-exists-behavior OVERWRITE \
            --s3-location bucket=${{ matrix.s3-bucket }},key=${{ matrix.s3-filename }}.zip,bundleType=zip \
+
+#   --s3-location s3://${{ matrix.s3-bucket }}/${{ matrix.s3-filename }}.zip \
