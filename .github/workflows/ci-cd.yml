@@ -81,6 +81,9 @@ jobs:
       - name: Create zip file
         run: zip -r ${{matrix.s3-filename}}.zip build appspec.yml script ecosystem.config.js
 
+      - name: Show Zip File Content
+        run: unzip -l ${{matrix.s3-filename}}.zip
+
       # Deploy push to AWS S3
       - name: AWS Deploy push
         run: |
