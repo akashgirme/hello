@@ -75,6 +75,11 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+      
+      # Create a ZIP File
+
+      - name: Create zip file
+        run: zip -r ${{matrix.s3-filename}}.zip build appspec.yml script ecosystem.config.js
 
       # Deploy push to AWS S3
       - name: AWS Deploy push
