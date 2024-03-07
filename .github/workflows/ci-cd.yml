@@ -1,4 +1,4 @@
-name: CI/CD
+name: Continues Integration
 
 on:
   push:
@@ -9,8 +9,8 @@ on:
       - main
 
 jobs:
-  buildAndTest:
-    name: CI Pipeline
+  TestAndBuild:
+    name: Application Build
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -18,49 +18,33 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-
-      # Initialize Node.js
       - name: Install Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
 
-      # Install project dependencies, test and build
-      - name: Install dependencies
-        run: npm install
-      - name: Run build
+      - name: Install Dependencies
+        run: npm ci
+      - name: Build Application
         run: npm run build
 
   deploy:
-    name: CD Pipeline
+    name: Create Deployment
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
         node-version: ['20.x']
         appname: ['codedeploy-app']
         deploy-group: ['production-code-deployment-group']
+        deployment-environment: ['production']
         s3-bucket: ['skillstreet-application-build-artifacts']
         s3-filename: ['build-${{ github.sha }}']
 
-    needs: buildAndTest
+    needs: TestAndBuild
     steps:
       - uses: actions/checkout@v2
 
-      # Initialize Node.js
-      - name: Install Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      # Install project dependencies and build
-      - name: Install dependencies
-        run: npm install
-      - name: Run build
-        run: npm run build
-
-      # Install AWS CLI 2
-      - name: Check if AWS CLI 2 is installed
+      - name: Install AWS CLI 2
         run: |
           if [ ! -d "/usr/local/aws-cli/v2/current" ]; then
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -68,33 +52,26 @@ jobs:
             sudo ./aws/install
           fi
 
-      # Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ secrets.AWS_REGION }}
       
-      # Create a ZIP File
-
-      - name: Create zip file
-        run: zip -r ${{matrix.s3-filename}}.zip build appspec.yml script ecosystem.config.js
-
-      - name: Show Zip File Content
-        run: unzip -l ${{matrix.s3-filename}}.zip
+      - name: Create zip file of build and appspec.yml
+        run: zip -r ${{matrix.s3-filename}}.zip build appspec.yml script
 
       - name: Upload zip file to S3
         run: |
-          aws s3 cp ${{matrix.s3-filename}}.zip s3://${{ matrix.s3-bucket }}/${{ matrix.s3-filename }}.zip
+          aws s3 cp ${{matrix.s3-filename}}.zip s3://${{ matrix.s3-bucket }}/${{ matrix.deployment-environment }}/${{ matrix.s3-filename }}.zip
  
-      # Create deployment to CodeDeploy
-      - name: AWS Create Deployment
+      - name: Create AWS CodeDeploy Deployment
         run: |
           aws deploy create-deployment \
            --application-name ${{ matrix.appname }} \
            --deployment-config-name CodeDeployDefault.AllAtOnce \
            --deployment-group-name ${{ matrix.deploy-group }} \
            --file-exists-behavior OVERWRITE \
-           --s3-location bucket=${{ matrix.s3-bucket }},key=${{ matrix.s3-filename }}.zip,bundleType=zip \
+           --s3-location bucket=${{ matrix.s3-bucket }},key=${{ matrix.deployment-environment }}/${{ matrix.s3-filename }}.zip,bundleType=zip \
 
