@@ -40,7 +40,7 @@ jobs:
         node-version: ['20.x']
         appname: ['codedeploy-app']
         deploy-group: ['production-code-deployment-group']
-        s3-bucket: ['skill-street-application-build-artifacts']
+        s3-bucket: ['skillstreet-application-build-artifacts']
         s3-filename: ['build-${{ github.sha }}']
 
     needs: buildAndTest
