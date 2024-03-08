@@ -36,6 +36,7 @@ jobs:
   deploy:
     name: Create Deployment
     runs-on: ubuntu-latest
+    needs: TestAndBuild
     strategy:
       matrix:
         node-version: ['20.x']
@@ -45,7 +46,6 @@ jobs:
         s3-bucket: ['skillstreet-application-build-artifacts']
         s3-filename: ['build-${{ github.sha }}']
 
-    needs: TestAndBuild
     steps:
       - uses: actions/checkout@v2
       - name: Download Build Artifacts
