@@ -40,7 +40,7 @@ jobs:
     strategy:
       matrix:
         appname: ['codedeploy-app']
-        deploy-group: ['prod-code-deployment-group']
+        deploy-group: ['production-code-deployment-group']
         deployment-environment: ['production']
         s3-bucket: ['skillstreet-application-build-artifacts']
         s3-filename: ['build-${{ github.sha }}']
