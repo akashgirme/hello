@@ -27,6 +27,11 @@ jobs:
         run: npm ci
       - name: Build Application
         run: npm run build
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-artifacts
+          path: ./build
 
   deploy:
     name: Create Deployment
@@ -43,6 +48,10 @@ jobs:
     needs: TestAndBuild
     steps:
       - uses: actions/checkout@v2
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: build-artifacts
 
       - name: Install AWS CLI 2
         run: |
