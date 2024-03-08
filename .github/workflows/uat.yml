@@ -3,10 +3,10 @@ name: Continues Integration
 on:
   push:
     branches:
-      - main
+      - uat
   pull_request:
     branches:
-      - main
+      - uat
 
 jobs:
   TestAndBuild:
@@ -40,8 +40,8 @@ jobs:
     strategy:
       matrix:
         appname: ['codedeploy-app']
-        deploy-group: ['production-code-deployment-group']
-        deployment-environment: ['production']
+        deploy-group: ['uat-code-deployment-group']
+        deployment-environment: ['uat']
         s3-bucket: ['skillstreet-application-build-artifacts']
         s3-filename: ['build-${{ github.sha }}']
 

@@ -1,0 +1,86 @@
+name: Continues Integration
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  TestAndBuild:
+    name: Application Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['20.x']
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install Dependencies
+        run: npm ci
+      - name: Build Application
+        run: npm run build
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-artifacts
+          path: ./build
+
+  deploy:
+    name: Create Deployment
+    runs-on: ubuntu-latest
+    needs: TestAndBuild
+    strategy:
+      matrix:
+        appname: ['codedeploy-app']
+        deploy-group: ['dev-code-deployment-group']
+        deployment-environment: ['dev']
+        s3-bucket: ['skillstreet-application-build-artifacts']
+        s3-filename: ['build-${{ github.sha }}']
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: build-artifacts
+          path: ./build
+
+      - name: Install AWS CLI 2
+        run: |
+          if [ ! -d "/usr/local/aws-cli/v2/current" ]; then
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Create zip file of build and appspec.yml
+        run: zip -r ${{matrix.s3-filename}}.zip build appspec.yml script
+
+      - name: Upload zip file to S3
+        run: |
+          aws s3 cp ${{matrix.s3-filename}}.zip s3://${{ matrix.s3-bucket }}/${{ matrix.deployment-environment }}/${{ matrix.s3-filename }}.zip
+ 
+      - name: Create AWS CodeDeploy Deployment
+        run: |
+          aws deploy create-deployment \
+           --application-name ${{ matrix.appname }} \
+           --deployment-config-name CodeDeployDefault.AllAtOnce \
+           --deployment-group-name ${{ matrix.deploy-group }} \
+           --file-exists-behavior OVERWRITE \
+           --s3-location bucket=${{ matrix.s3-bucket }},key=${{ matrix.deployment-environment }}/${{ matrix.s3-filename }}.zip,bundleType=zip \
+
